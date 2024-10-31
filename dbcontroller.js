@@ -75,7 +75,7 @@ $(document).ready(function () {
   var str = "//Code Example \n" + " function foo()     {  var x=1; return x; }";
   window.codemirror1 = CodeMirror($("#code").get(0), {
     value: str,
-    mode: "javascript",
+    mode: "python",
     lineNumbers: true,
     styleActiveLine: true,
     matchBrackets: true,
@@ -211,10 +211,15 @@ function readJsonFile() {
 
 function show(doc) {
   // Create table element
+  const tbl = document.getElementById('notesTables');
+  if (tbl && tbl.parentNode) {
+      tbl.parentNode.removeChild(table);
+  }
+
   var table = document.createElement('table');
   table.className = 'table table-dark table-striped';
   table.border = '2';
-  table.id = 'tbl';
+  table.id = 'notesTable';
   
   // Create table header
   var headerRow = document.createElement('tr');
