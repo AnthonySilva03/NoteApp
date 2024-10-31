@@ -1,0 +1,55 @@
+#language,
+#title,
+#tags {
+  border-radius: 25px;
+  border: 2px solid black;
+  background-color: lightblue;
+}
+
+
+h3 {
+  text-decoration: underline;
+  font-style: italic;
+  font-weight: bold;
+  text-align: center;
+}
+
+.CodeMirror {
+  border-radius: 25px;
+  border: 2px solid blue;
+}
+
+.ql-toolbar,
+.ql-container {
+  border-radius: 25px;
+  border: 4px solid green;
+}
+
+#editor {
+  height: 300px;
+  border: 2px solid black;
+}
+
+input[type="text"] {
+  text-align: left;
+}
+
+label {
+  padding: 5px;
+  position: relative;
+  border-radius: 5%;
+}
+
+input[type="checkbox"] {
+  padding: 5px;
+  position: relative;
+  border-radius: 5%;
+}
+
+td.pointer {
+  cursor: pointer;
+}
+
+td:hover {
+  background-color: #ccc;
+}

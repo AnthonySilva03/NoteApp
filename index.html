@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Programming Notes</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!--bootstrap -->
+  <link rel="stylesheet" href="./node_modules/bootstrap/dist/css/bootstrap.min.css" />
+
+  <!--PouchDB -->
+  <script src="./node_modules/pouchdb/dist/pouchdb.min.js"></script>
+  <script src="./node_modules/pouchdb/dist/pouchdb.find.min.js"></script>
+  
+  <!--codeMirror -->
+  <link rel="stylesheet" href="./node_modules/codemirror/lib/codemirror.css" />
+  <script>
+    const CodeMirror = require("codemirror");
+  </script>
+  <link rel="stylesheet" href="./node_modules/codemirror/theme/darcula.css" />
+  <link rel="stylesheet" href="./node_modules/codemirror/theme/material-darker.css" />
+  <script src="./node_modules/codemirror/addon/edit/matchbrackets.js"></script>
+  <script src="./node_modules/codemirror/mode/javascript/javascript.js"></script>
+  <!--Quill-->
+  <link rel="stylesheet" href="./node_modules/quill/dist/quill.snow.css" />
+  
+  <!--page style-->
+  <link rel="stylesheet" href="style.css" />
+
+  <!--controller-->
+  <script src="dbcontroller.js" async></script>
+
+</head>
+
+<body>
+  <h3>Take Note</h3>
+  <div class="container-fluid">
+    <div class="row">
+      <div id="side-bar" class="col-sm-4 sidenav border">
+        <h3>Enter Note Info</h3>
+        <div class="form-group">
+          <label for="language">Programming Language</label>
+          <input id="language" list="language-list" name="language" type="text" class="form-control">
+          <datalist id="language-list"></datalist>
+        </div>
+        <div class="form-group">
+          <label for="title">Title</label>
+          <input id="title" name="title" type="text" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="tags">Tags</label>
+          <input id="tags" name="tags" type="text" class="form-control">
+        </div>
+        <div class="form-group">
+          <button class="btn btn-primary" id="findNote">Find Note!</button>
+        </div>
+        <div id="noteTable"></div>
+      </div>
+
+      <div id="note-area" class="col-lg-7">
+        <div class="form-group" id="noteDiv">
+          <h6>Notes</h6>
+          <div id="editor"></div>
+        </div>
+
+        <div class="form-group" id="codeDiv">
+          <h6>Code Examples</h6>
+          <div id="code"></div>
+        </div>
+
+        <div class="form-group">
+          <button class="btn btn-primary" id="addNote">ADD Note!</button>
+          <button class="btn btn-primary" id="deleteNote">Delete Note!</button>
+          <button class="btn btn-primary" id="clearNote">Clear Note</button>
+        </div>
+
+        <div id="demo"></div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
