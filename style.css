@@ -18,10 +18,18 @@ h3 {
   position: relative;
 }
 
-#openSettings {
+#header-controls {
   position: absolute;
   top: 4px;
   right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#syncStatus {
+  font-size: 0.85rem;
+  padding: 5px 8px;
 }
 
 #settingsDialog {

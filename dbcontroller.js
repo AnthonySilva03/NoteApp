@@ -35,6 +35,38 @@ $(async function () {
 });
 
 $("#tags").on("input", syncCheckboxes);
+$("#language").on("input change", setCodeMode);
+
+//CodeMirror mode for each topic; anything else falls back to javascript
+var CODE_MODES = {
+  "javascript": "javascript", "node.js": "javascript", "jquery": "javascript", "js": "javascript",
+  "json": "application/json", "typescript": "text/typescript", "ts": "text/typescript",
+  "html": "htmlmixed", "bootstrap": "htmlmixed", "xml": "xml",
+  "css": "css", "scss": "text/x-scss", "less": "text/x-less",
+  "java": "text/x-java", "c": "text/x-csrc", "c++": "text/x-c++src", "cpp": "text/x-c++src",
+  "c#": "text/x-csharp", "csharp": "text/x-csharp", "kotlin": "text/x-kotlin",
+  "python": "python", "sql": "text/x-sql", "bash": "shell", "shell": "shell",
+  "powershell": "powershell", "markdown": "markdown", "yaml": "yaml",
+  "go": "go", "rust": "rust", "ruby": "ruby"
+};
+
+//switches the code editor's highlighting to match the topic
+function setCodeMode() {
+  var topic = $("#language").val().trim().toLowerCase();
+  var mode = CODE_MODES[topic] || "javascript";
+  if (codemirror1.getOption("mode") !== mode) {
+    codemirror1.setOption("mode", mode);
+  }
+}
+
+//Ctrl+S (Cmd+S on macOS) saves the current note, even from inside the editors
+document.addEventListener("keydown", function (event) {
+  if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "s") {
+    event.preventDefault();
+    if (document.getElementById("settingsDialog").open) return;
+    addNote(true);
+  }
+}, true);
 
 //live sync with CouchDB, if one is configured.
 //Cancels any sync already running, so it can be called again after settings change.
@@ -45,23 +77,66 @@ function startSync(remote) {
   }
   if (!remote || !remote.url) {
     console.log("No remote CouchDB configured; working offline only");
+    setSyncStatus("off");
     return;
   }
   var remoteDB = new PouchDB(remote.url.replace(/\/$/, "") + "/" + dbName, {
     auth: { username: remote.username, password: remote.password }
   });
-  syncHandler = db.sync(remoteDB, {
+  setSyncStatus("connecting");
+  var handler = db.sync(remoteDB, {
     live: true,
     retry: true
-  }).on('change', function (change) {
+  });
+  syncHandler = handler;
+  //ignore events from a sync that has since been replaced or cancelled
+  var current = function () { return syncHandler === handler; };
+  handler.on('change', function (change) {
     console.log("Sync " + change.direction + ": " + change.change.docs.length + " doc(s)");
     if (change.direction === "pull") {
       renderLanguages();
       renderTags();
     }
+  }).on('active', function () {
+    if (current()) setSyncStatus("syncing");
+  }).on('paused', function (err) {
+    if (!current()) return;
+    if (err) {
+      setSyncStatus("offline", err);
+      return;
+    }
+    //"paused" also fires with no error while the server is unreachable,
+    //so confirm the server answers before showing "Synced"
+    remoteDB.info().then(function () {
+      if (current()) setSyncStatus("synced");
+    }).catch(function (infoErr) {
+      if (current()) setSyncStatus("offline", infoErr);
+    });
   }).on('error', function (err) {
     console.log("Couldn't sync with remote database", err);
+    if (current()) setSyncStatus("error", err);
   });
+}
+
+var SYNC_STATES = {
+  off: { text: "Sync off", badge: "badge-secondary" },
+  connecting: { text: "Connecting…", badge: "badge-info" },
+  syncing: { text: "Syncing…", badge: "badge-info" },
+  synced: { text: "Synced", badge: "badge-success" },
+  offline: { text: "Offline", badge: "badge-warning" },
+  error: { text: "Sync error", badge: "badge-danger" }
+};
+
+//updates the header badge; the tooltip shows the error, if any
+function setSyncStatus(state, err) {
+  var s = SYNC_STATES[state];
+  if (err && (err.status === 401 || err.status === 403)) {
+    s = { text: "Login failed", badge: "badge-danger" };
+  }
+  $("#syncStatus")
+    .text(s.text)
+    .attr("class", "badge " + s.badge)
+    .attr("title", err ? (err.message || err.reason || String(err)) : "");
 }
 
 // creates index's to query by language and tags,
@@ -234,6 +309,7 @@ function displayNote() {
     quill.setContents(doc.notes || []);
     codemirror1.setValue(doc.examples || "");
     syncCheckboxes();
+    setCodeMode();
   }).catch(function (err) {
     console.log(err);
     showMessage("Couldn't open note: " + err.message);
@@ -253,6 +329,9 @@ $("#deleteNote").on("click", async () => {
     showMessage("No note to delete");
     return;
   }
+  if (!confirm('Delete "' + (currentNote.title || "(untitled)") + '"? This can\'t be undone.')) {
+    return;
+  }
   try {
     var doc = await db.get(currentNote._id);
     await db.remove(doc);
@@ -269,18 +348,26 @@ $("#deleteNote").on("click", async () => {
   }
 });
 
-async function addNote() {
+//saves the form as a new note, or updates the open one.
+//keepOpen (used by Ctrl+S) leaves the note in the editor instead of clearing it.
+async function addNote(keepOpen) {
   try {
     var note;
+    var result;
     if (currentNote == undefined) {
       note = updateNote({});
-      var result = await db.post(note);
+      result = await db.post(note);
       note._id = result.id;
     } else {
       note = updateNote(await db.get(currentNote._id));
-      await db.put(note);
+      result = await db.put(note);
     }
-    clearNote();
+    note._rev = result.rev;
+    if (keepOpen) {
+      currentNote = note;
+    } else {
+      clearNote();
+    }
     showMessage("Note saved");
     refreshResults();
     renderLanguages();
@@ -319,6 +406,7 @@ function clearNote() {
   // Quill v2: use setContents with empty delta instead of deprecated setText
   quill.setContents([]);
   currentNote = undefined;
+  setCodeMode();
 }
 
 function showMessage(text) {
