@@ -3,6 +3,8 @@
 var currentNote = undefined;
 var lastSelector = undefined;
 var db;
+var dbName;
+var syncHandler;
 
 // starter suggestions, merged with the topics and tags used by saved notes
 var DEFAULT_LANGUAGES = ["javascript", "html", "css", "bootstrap", "jquery", "node.js", "java"];
@@ -23,8 +25,9 @@ $(async function () {
   });
 
   var config = await window.electronAPI.getConfig();
-  db = new PouchDB(config.dbName);
-  startSync(config.remoteCouch, config.dbName);
+  dbName = config.dbName;
+  db = new PouchDB(dbName);
+  startSync(config.remoteCouch);
 
   await dbDefaults();
   renderLanguages();
@@ -33,8 +36,13 @@ $(async function () {
 
 $("#tags").on("input", syncCheckboxes);
 
-//live sync with CouchDB, if one is configured
-function startSync(remote, dbName) {
+//live sync with CouchDB, if one is configured.
+//Cancels any sync already running, so it can be called again after settings change.
+function startSync(remote) {
+  if (syncHandler) {
+    syncHandler.cancel();
+    syncHandler = undefined;
+  }
   if (!remote || !remote.url) {
     console.log("No remote CouchDB configured; working offline only");
     return;
@@ -42,7 +50,7 @@ function startSync(remote, dbName) {
   var remoteDB = new PouchDB(remote.url.replace(/\/$/, "") + "/" + dbName, {
     auth: { username: remote.username, password: remote.password }
   });
-  db.sync(remoteDB, {
+  syncHandler = db.sync(remoteDB, {
     live: true,
     retry: true
   }).on('change', function (change) {
@@ -326,3 +334,39 @@ function normalizeTags(tags) {
   var lower = tags.filter(Boolean).map(function (t) { return t.toLowerCase(); });
   return Array.from(new Set(lower));
 }
+
+//settings dialog: CouchDB sync options. The stored password is never shown;
+//leaving the field blank keeps it.
+$("#openSettings").on("click", async () => {
+  var s = await window.electronAPI.getSettings();
+  $("#syncEnabled").prop("checked", s.enabled);
+  $("#couchUrl").val(s.url);
+  $("#couchUser").val(s.username);
+  $("#couchPassword").val("");
+  $("#passwordHint").text(s.hasPassword ? "A password is saved. Leave blank to keep it." : "");
+  $("#settingsError").text("");
+  document.getElementById("settingsDialog").showModal();
+});
+
+$("#cancelSettings").on("click", () => {
+  document.getElementById("settingsDialog").close();
+});
+
+$("#settingsForm").on("submit", async (event) => {
+  event.preventDefault();
+  var result = await window.electronAPI.saveSettings({
+    enabled: $("#syncEnabled").prop("checked"),
+    url: $("#couchUrl").val(),
+    username: $("#couchUser").val(),
+    password: $("#couchPassword").val()
+  });
+  if (!result.success) {
+    $("#settingsError").text(result.error);
+    return;
+  }
+  $("#couchPassword").val("");
+  document.getElementById("settingsDialog").close();
+  var config = await window.electronAPI.getConfig();
+  startSync(config.remoteCouch);
+  showMessage(config.remoteCouch ? "Sync settings saved" : "Sync turned off");
+});

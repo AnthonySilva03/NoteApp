@@ -14,6 +14,28 @@ h3 {
   text-align: center;
 }
 
+#app-header {
+  position: relative;
+}
+
+#openSettings {
+  position: absolute;
+  top: 4px;
+  right: 16px;
+}
+
+#settingsDialog {
+  width: 420px;
+  max-width: 90vw;
+  border: 2px solid black;
+  border-radius: 15px;
+  padding: 20px;
+}
+
+#settingsDialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+}
+
 #note-area {
   display: flex;
   gap: 10px;
